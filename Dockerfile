@@ -27,5 +27,12 @@ COPY --from=builder /app/kasir-api .
 # Expose port
 EXPOSE 8080
 
+# Set environment variable for port (can be overridden at runtime)
+ENV PORT=8080
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+    CMD wget --quiet --tries=1 --spider http://127.0.0.1:8080/health || exit 1
+
 # Run the application
 CMD ["./kasir-api"]
