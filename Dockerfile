@@ -1,15 +1,31 @@
-FROM golang:1.22-alpine AS builder
+# Stage 1: Build
+FROM golang:1.25-alpine AS builder
 
 WORKDIR /app
+
+# Install dependencies
 COPY go.mod go.sum ./
 RUN go mod download
 
+# Copy source code
 COPY . .
-RUN CGO_ENABLED=0 GOOS=linux go build -o app
 
+# Build the application
+RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o kasir-api main.go
+
+# Stage 2: Runtime
 FROM alpine:latest
-WORKDIR /app
-COPY --from=builder /app/app .
 
+# Install ca-certificates for HTTPS
+RUN apk --no-cache add ca-certificates
+
+WORKDIR /root/
+
+# Copy binary from builder
+COPY --from=builder /app/kasir-api .
+
+# Expose port
 EXPOSE 8080
-CMD ["./app"]
+
+# Run the application
+CMD ["./kasir-api"]
