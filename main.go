@@ -35,7 +35,7 @@ func main() {
 	http.HandleFunc("PUT /api/categories/", handler.UpdateCategory)
 	http.HandleFunc("DELETE /api/categories/", handler.DeleteCategory)
 
-	http.HandleFunc("GET /health", handler.HealthCheck)
+	http.HandleFunc("/health", handler.HealthCheck)
 
 	// Swagger
 	http.HandleFunc("/swagger/", httpSwagger.WrapHandler)
