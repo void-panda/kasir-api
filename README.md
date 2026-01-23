@@ -1,4 +1,4 @@
-# KASIR API (GOLANG)
+# KASIR API (GOLANG) (Cobain New Branch)
 
 ## Description
 Aplikasi kasir sederhana yang dibangun menggunakan Go dengan arsitektur bersih (Clean Architecture). API menyediakan endpoint untuk mengelola produk dan kategori.

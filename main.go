@@ -17,6 +17,11 @@ import (
 // @BasePath /
 
 func main() {
+
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte("API ready!"))
+	})
+
 	// Register routes
 	http.HandleFunc("GET /api/products", handler.GetProducts)
 	http.HandleFunc("GET /api/products/", handler.GetProductByID)
