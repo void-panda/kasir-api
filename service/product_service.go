@@ -1,4 +1,4 @@
-package handler
+package service
 
 import "kasir-api/model"
 
@@ -12,7 +12,7 @@ func GetAllProducts() []model.Product {
 	return products
 }
 
-func GetProduct(id int) *model.Product {
+func GetProductByID(id int) *model.Product {
 	for i, product := range products {
 		if product.ID == id {
 			return &products[i]
@@ -21,24 +21,31 @@ func GetProduct(id int) *model.Product {
 	return nil
 }
 
-func AddProduct(product model.Product) model.Product {
+func CreateProduct(product model.Product) model.Product {
 	product.ID = len(products) + 1
 	products = append(products, product)
 	return product
 }
 
-func UpdateProductData(id int, updatedProduct model.Product) *model.Product {
+func UpdateProduct(id int, updatedProduct model.Product) *model.Product {
 	for i := range products {
 		if products[i].ID == id {
-			updatedProduct.ID = id
-			products[i] = updatedProduct
+			if updatedProduct.Name != "" {
+				products[i].Name = updatedProduct.Name
+			}
+			if updatedProduct.Price != 0 {
+				products[i].Price = updatedProduct.Price
+			}
+			if updatedProduct.Stock != 0 {
+				products[i].Stock = updatedProduct.Stock
+			}
 			return &products[i]
 		}
 	}
 	return nil
 }
 
-func DeleteProductData(id int) bool {
+func DeleteProduct(id int) bool {
 	for i, p := range products {
 		if p.ID == id {
 			products = append(products[:i], products[i+1:]...)

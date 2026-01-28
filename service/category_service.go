@@ -1,4 +1,4 @@
-package handler
+package service
 
 import "kasir-api/model"
 
@@ -11,7 +11,7 @@ func GetAllCategories() []model.Category {
 	return categories
 }
 
-func GetCategory(id int) *model.Category {
+func GetCategoryByID(id int) *model.Category {
 	for i, category := range categories {
 		if category.ID == id {
 			return &categories[i]
@@ -20,24 +20,28 @@ func GetCategory(id int) *model.Category {
 	return nil
 }
 
-func AddCategory(category model.Category) model.Category {
+func CreateCategory(category model.Category) model.Category {
 	category.ID = len(categories) + 1
 	categories = append(categories, category)
 	return category
 }
 
-func UpdateCategoryData(id int, updatedCategory model.Category) *model.Category {
+func UpdateCategory(id int, updatedCategory model.Category) *model.Category {
 	for i := range categories {
 		if categories[i].ID == id {
-			updatedCategory.ID = id
-			categories[i] = updatedCategory
+			if updatedCategory.Name != "" {
+				categories[i].Name = updatedCategory.Name
+			}
+			if updatedCategory.Description != "" {
+				categories[i].Description = updatedCategory.Description
+			}
 			return &categories[i]
 		}
 	}
 	return nil
 }
 
-func DeleteCategoryData(id int) bool {
+func DeleteCategory(id int) bool {
 	for i, c := range categories {
 		if c.ID == id {
 			categories = append(categories[:i], categories[i+1:]...)
