@@ -9,7 +9,15 @@ import (
 	"kasir-api/service"
 )
 
-// GetProducts godoc
+type ProductHandler struct {
+	service *service.ProductService
+}
+
+func NewProductHandler(service *service.ProductService) *ProductHandler {
+	return &ProductHandler{service: service}
+}
+
+// GetAll godoc
 // @Summary Get all products
 // @Description Mengambil semua data produk
 // @Tags products
@@ -17,14 +25,18 @@ import (
 // @Produce json
 // @Success 200 {object} model.Response
 // @Router /api/products [get]
-func GetProducts(w http.ResponseWriter, r *http.Request) {
-	products := service.GetAllProducts()
+func (h *ProductHandler) GetAll(w http.ResponseWriter, r *http.Request) {
+	products, err := h.service.GetAll()
+	if err != nil {
+		model.Error(w, http.StatusInternalServerError, err.Error())
+		return
+	}
 	model.Success(w, http.StatusOK, "successfully get products", products)
 }
 
-// GetProductByID godoc
+// GetByID godoc
 // @Summary Get product by ID
-// @Description Mengambil produk berdasarkan ID
+// @Description Mengambil produk berdasarkan ID dengan informasi kategori
 // @Tags products
 // @Accept json
 // @Produce json
@@ -32,7 +44,7 @@ func GetProducts(w http.ResponseWriter, r *http.Request) {
 // @Success 200 {object} model.Response
 // @Failure 404 {object} model.Response
 // @Router /api/products/{id} [get]
-func GetProductByID(w http.ResponseWriter, r *http.Request) {
+func (h *ProductHandler) GetByID(w http.ResponseWriter, r *http.Request) {
 	idStr := r.PathValue("id")
 	id, err := strconv.Atoi(idStr)
 	if err != nil {
@@ -40,16 +52,17 @@ func GetProductByID(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	product := service.GetProductByID(id)
-	if product == nil {
-		model.Error(w, http.StatusNotFound, "product not found")
+	// Menggunakan GetByIDWithCategory untuk mendapatkan data produk beserta nama kategori
+	product, err := h.service.GetByIDWithCategory(id)
+	if err != nil {
+		model.Error(w, http.StatusNotFound, err.Error())
 		return
 	}
 
 	model.Success(w, http.StatusOK, "successfully get product", product)
 }
 
-// CreateProduct godoc
+// Create godoc
 // @Summary Create new product
 // @Description Menambahkan produk baru
 // @Tags products
@@ -58,18 +71,23 @@ func GetProductByID(w http.ResponseWriter, r *http.Request) {
 // @Param product body model.Product true "Product Data" SchemaExample({"name":"Product Name","price":10000,"stock":5})
 // @Success 201 {object} model.Response
 // @Router /api/products [post]
-func CreateProduct(w http.ResponseWriter, r *http.Request) {
-	var newProduct model.Product
-	if err := json.NewDecoder(r.Body).Decode(&newProduct); err != nil {
+func (h *ProductHandler) Create(w http.ResponseWriter, r *http.Request) {
+	var product model.Product
+	if err := json.NewDecoder(r.Body).Decode(&product); err != nil {
 		model.Error(w, http.StatusBadRequest, "Invalid Request")
 		return
 	}
 
-	createdProduct := service.CreateProduct(newProduct)
-	model.Success(w, http.StatusCreated, "successfully added product", createdProduct)
+	err := h.service.Create(&product)
+	if err != nil {
+		model.Error(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	model.Success(w, http.StatusCreated, "successfully added product", product)
 }
 
-// UpdateProduct godoc
+// Update godoc
 // @Summary Update product
 // @Description Update produk berdasarkan ID
 // @Tags products
@@ -80,7 +98,7 @@ func CreateProduct(w http.ResponseWriter, r *http.Request) {
 // @Success 200 {object} model.Response
 // @Failure 404 {object} model.Response
 // @Router /api/products/{id} [put]
-func UpdateProduct(w http.ResponseWriter, r *http.Request) {
+func (h *ProductHandler) Update(w http.ResponseWriter, r *http.Request) {
 	idStr := r.PathValue("id")
 	id, err := strconv.Atoi(idStr)
 	if err != nil {
@@ -88,22 +106,23 @@ func UpdateProduct(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var updateProduct model.Product
-	if err := json.NewDecoder(r.Body).Decode(&updateProduct); err != nil {
+	var product model.Product
+	if err := json.NewDecoder(r.Body).Decode(&product); err != nil {
 		model.Error(w, http.StatusBadRequest, "Invalid Request")
 		return
 	}
 
-	updated := service.UpdateProduct(id, updateProduct)
-	if updated == nil {
-		model.Error(w, http.StatusNotFound, "product not found")
+	product.ID = id
+	err = h.service.Update(&product)
+	if err != nil {
+		model.Error(w, http.StatusNotFound, err.Error())
 		return
 	}
 
-	model.Success(w, http.StatusOK, "successfully updated product", updated)
+	model.Success(w, http.StatusOK, "successfully updated product", product)
 }
 
-// DeleteProduct godoc
+// Delete godoc
 // @Summary Delete product
 // @Description Menghapus produk berdasarkan ID
 // @Tags products
@@ -113,7 +132,7 @@ func UpdateProduct(w http.ResponseWriter, r *http.Request) {
 // @Success 200 {object} model.Response
 // @Failure 404 {object} model.Response
 // @Router /api/products/{id} [delete]
-func DeleteProduct(w http.ResponseWriter, r *http.Request) {
+func (h *ProductHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	idStr := r.PathValue("id")
 	id, err := strconv.Atoi(idStr)
 	if err != nil {
@@ -121,8 +140,9 @@ func DeleteProduct(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if !service.DeleteProduct(id) {
-		model.Error(w, http.StatusNotFound, "product not found")
+	err = h.service.Delete(id)
+	if err != nil {
+		model.Error(w, http.StatusNotFound, err.Error())
 		return
 	}
 

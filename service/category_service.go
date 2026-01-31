@@ -1,52 +1,34 @@
 package service
 
-import "kasir-api/model"
+import (
+	"kasir-api/model"
+	"kasir-api/repositories"
+)
 
-var categories = []model.Category{
-	{ID: 1, Name: "Category A", Description: "Description A"},
-	{ID: 2, Name: "Category B", Description: "Description B"},
+type CategoryService struct {
+	repo *repositories.CategoryRepository
 }
 
-func GetAllCategories() []model.Category {
-	return categories
+func NewCategoryService(repo *repositories.CategoryRepository) *CategoryService {
+	return &CategoryService{repo: repo}
 }
 
-func GetCategoryByID(id int) *model.Category {
-	for i, category := range categories {
-		if category.ID == id {
-			return &categories[i]
-		}
-	}
-	return nil
+func (s *CategoryService) GetAll() ([]model.Category, error) {
+	return s.repo.GetAll()
 }
 
-func CreateCategory(category model.Category) model.Category {
-	category.ID = len(categories) + 1
-	categories = append(categories, category)
-	return category
+func (s *CategoryService) Create(data *model.Category) error {
+	return s.repo.Create(data)
 }
 
-func UpdateCategory(id int, updatedCategory model.Category) *model.Category {
-	for i := range categories {
-		if categories[i].ID == id {
-			if updatedCategory.Name != "" {
-				categories[i].Name = updatedCategory.Name
-			}
-			if updatedCategory.Description != "" {
-				categories[i].Description = updatedCategory.Description
-			}
-			return &categories[i]
-		}
-	}
-	return nil
+func (s *CategoryService) GetByID(id int) (*model.Category, error) {
+	return s.repo.GetByID(id)
 }
 
-func DeleteCategory(id int) bool {
-	for i, c := range categories {
-		if c.ID == id {
-			categories = append(categories[:i], categories[i+1:]...)
-			return true
-		}
-	}
-	return false
+func (s *CategoryService) Update(category *model.Category) error {
+	return s.repo.Update(category)
+}
+
+func (s *CategoryService) Delete(id int) error {
+	return s.repo.Delete(id)
 }

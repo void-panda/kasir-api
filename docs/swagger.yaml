@@ -11,6 +11,10 @@ definitions:
     type: object
   model.Product:
     properties:
+      category:
+        $ref: '#/definitions/model.Category'
+      category_id:
+        type: integer
       id:
         type: integer
       name:
@@ -20,27 +24,14 @@ definitions:
       stock:
         type: integer
     type: object
-  model.Task:
+  model.Response:
     properties:
-      description:
+      data: {}
+      message:
         type: string
-      id:
-        type: integer
       status:
-        $ref: '#/definitions/model.TaskStatus'
-      title:
         type: string
     type: object
-  model.TaskStatus:
-    enum:
-    - pending
-    - in_progress
-    - completed
-    type: string
-    x-enum-varnames:
-    - TaskStatusPending
-    - TaskStatusInProgress
-    - TaskStatusCompleted
 host: localhost:8080
 info:
   contact: {}
@@ -58,8 +49,7 @@ paths:
         "200":
           description: OK
           schema:
-            additionalProperties: true
-            type: object
+            $ref: '#/definitions/model.Response'
       summary: Get all categories
       tags:
       - categories
@@ -80,8 +70,7 @@ paths:
         "201":
           description: Created
           schema:
-            additionalProperties: true
-            type: object
+            $ref: '#/definitions/model.Response'
       summary: Create new category
       tags:
       - categories
@@ -102,14 +91,11 @@ paths:
         "200":
           description: OK
           schema:
-            additionalProperties: true
-            type: object
+            $ref: '#/definitions/model.Response'
         "404":
           description: Not Found
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/model.Response'
       summary: Delete category
       tags:
       - categories
@@ -129,14 +115,11 @@ paths:
         "200":
           description: OK
           schema:
-            additionalProperties: true
-            type: object
+            $ref: '#/definitions/model.Response'
         "404":
           description: Not Found
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/model.Response'
       summary: Get category by ID
       tags:
       - categories
@@ -162,14 +145,11 @@ paths:
         "200":
           description: OK
           schema:
-            additionalProperties: true
-            type: object
+            $ref: '#/definitions/model.Response'
         "404":
           description: Not Found
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/model.Response'
       summary: Update category
       tags:
       - categories
@@ -184,8 +164,7 @@ paths:
         "200":
           description: OK
           schema:
-            additionalProperties: true
-            type: object
+            $ref: '#/definitions/model.Response'
       summary: Get all products
       tags:
       - products
@@ -206,8 +185,7 @@ paths:
         "201":
           description: Created
           schema:
-            additionalProperties: true
-            type: object
+            $ref: '#/definitions/model.Response'
       summary: Create new product
       tags:
       - products
@@ -228,21 +206,18 @@ paths:
         "200":
           description: OK
           schema:
-            additionalProperties: true
-            type: object
+            $ref: '#/definitions/model.Response'
         "404":
           description: Not Found
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/model.Response'
       summary: Delete product
       tags:
       - products
     get:
       consumes:
       - application/json
-      description: Mengambil produk berdasarkan ID
+      description: Mengambil produk berdasarkan ID dengan informasi kategori
       parameters:
       - description: Product ID
         in: path
@@ -255,14 +230,11 @@ paths:
         "200":
           description: OK
           schema:
-            additionalProperties: true
-            type: object
+            $ref: '#/definitions/model.Response'
         "404":
           description: Not Found
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/model.Response'
       summary: Get product by ID
       tags:
       - products
@@ -288,130 +260,12 @@ paths:
         "200":
           description: OK
           schema:
-            additionalProperties: true
-            type: object
+            $ref: '#/definitions/model.Response'
         "404":
           description: Not Found
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/model.Response'
       summary: Update product
       tags:
       - products
-  /api/tasks:
-    get:
-      consumes:
-      - application/json
-      description: Mengambil semua data user
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            additionalProperties: true
-            type: object
-      summary: Get all tasks
-      tags:
-      - tasks
-    post:
-      consumes:
-      - application/json
-      description: Membuat Task baru
-      parameters:
-      - description: Task Data
-        in: body
-        name: task
-        required: true
-        schema:
-          $ref: '#/definitions/model.Task'
-      produces:
-      - application/json
-      responses:
-        "201":
-          description: Created
-          schema:
-            additionalProperties: true
-            type: object
-      summary: Create new Task
-      tags:
-      - tasks
-  /api/tasks/{id}:
-    get:
-      consumes:
-      - application/json
-      description: Mengambil task berdasarkan ID
-      parameters:
-      - description: task ID
-        in: path
-        name: id
-        required: true
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            additionalProperties: true
-            type: object
-        "404":
-          description: Not Found
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      summary: Get task by ID
-      tags:
-      - tasks
-    patch:
-      consumes:
-      - application/json
-      description: Update task berdasarkan ID
-      parameters:
-      - description: task ID
-        in: path
-        name: id
-        required: true
-        type: integer
-      - description: Task Data
-        in: body
-        name: task
-        required: true
-        schema:
-          $ref: '#/definitions/model.Task'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            additionalProperties: true
-            type: object
-        "404":
-          description: Not Found
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      summary: Update Task
-      tags:
-      - tasks
-  /health:
-    get:
-      consumes:
-      - application/json
-      description: Check if server is running
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            additionalProperties: true
-            type: object
-      summary: Health check
-      tags:
-      - health
 swagger: "2.0"

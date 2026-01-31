@@ -9,7 +9,41 @@ import (
 	"kasir-api/service"
 )
 
-// GetCategories godoc
+type CategoryHandler struct {
+	service *service.CategoryService
+}
+
+func NewCategoryHandler(service *service.CategoryService) *CategoryHandler {
+	return &CategoryHandler{service: service}
+}
+
+// HandleCategories - GET /api/categories, POST /api/categories
+func (h *CategoryHandler) HandleCategories(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodGet:
+		h.GetAll(w, r)
+	case http.MethodPost:
+		h.Create(w, r)
+	default:
+		model.Error(w, http.StatusMethodNotAllowed, "Method not allowed")
+	}
+}
+
+// HandleCategoryByID - GET/PUT/DELETE /api/categories/{id}
+func (h *CategoryHandler) HandleCategoryByID(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodGet:
+		h.GetByID(w, r)
+	case http.MethodPut:
+		h.Update(w, r)
+	case http.MethodDelete:
+		h.Delete(w, r)
+	default:
+		model.Error(w, http.StatusMethodNotAllowed, "Method not allowed")
+	}
+}
+
+// GetAll godoc
 // @Summary Get all categories
 // @Description Mengambil semua data kategori
 // @Tags categories
@@ -17,12 +51,16 @@ import (
 // @Produce json
 // @Success 200 {object} model.Response
 // @Router /api/categories [get]
-func GetCategories(w http.ResponseWriter, r *http.Request) {
-	categories := service.GetAllCategories()
+func (h *CategoryHandler) GetAll(w http.ResponseWriter, r *http.Request) {
+	categories, err := h.service.GetAll()
+	if err != nil {
+		model.Error(w, http.StatusInternalServerError, err.Error())
+		return
+	}
 	model.Success(w, http.StatusOK, "successfully get categories", categories)
 }
 
-// GetCategoryByID godoc
+// GetByID godoc
 // @Summary Get category by ID
 // @Description Mengambil kategori berdasarkan ID
 // @Tags categories
@@ -32,7 +70,7 @@ func GetCategories(w http.ResponseWriter, r *http.Request) {
 // @Success 200 {object} model.Response
 // @Failure 404 {object} model.Response
 // @Router /api/categories/{id} [get]
-func GetCategoryByID(w http.ResponseWriter, r *http.Request) {
+func (h *CategoryHandler) GetByID(w http.ResponseWriter, r *http.Request) {
 	idStr := r.PathValue("id")
 	id, err := strconv.Atoi(idStr)
 	if err != nil {
@@ -40,16 +78,16 @@ func GetCategoryByID(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	category := service.GetCategoryByID(id)
-	if category == nil {
-		model.Error(w, http.StatusNotFound, "category not found")
+	category, err := h.service.GetByID(id)
+	if err != nil {
+		model.Error(w, http.StatusNotFound, err.Error())
 		return
 	}
 
 	model.Success(w, http.StatusOK, "successfully get category", category)
 }
 
-// CreateCategory godoc
+// Create godoc
 // @Summary Create new category
 // @Description Menambahkan kategori baru
 // @Tags categories
@@ -58,18 +96,23 @@ func GetCategoryByID(w http.ResponseWriter, r *http.Request) {
 // @Param category body model.Category true "Category Data" SchemaExample({"name":"Category Name","description":"Category Description"})
 // @Success 201 {object} model.Response
 // @Router /api/categories [post]
-func CreateCategory(w http.ResponseWriter, r *http.Request) {
-	var newCategory model.Category
-	if err := json.NewDecoder(r.Body).Decode(&newCategory); err != nil {
+func (h *CategoryHandler) Create(w http.ResponseWriter, r *http.Request) {
+	var category model.Category
+	if err := json.NewDecoder(r.Body).Decode(&category); err != nil {
 		model.Error(w, http.StatusBadRequest, "Invalid Request")
 		return
 	}
 
-	createdCategory := service.CreateCategory(newCategory)
-	model.Success(w, http.StatusCreated, "successfully added category", createdCategory)
+	err := h.service.Create(&category)
+	if err != nil {
+		model.Error(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	model.Success(w, http.StatusCreated, "successfully added category", category)
 }
 
-// UpdateCategory godoc
+// Update godoc
 // @Summary Update category
 // @Description Update kategori berdasarkan ID
 // @Tags categories
@@ -80,7 +123,7 @@ func CreateCategory(w http.ResponseWriter, r *http.Request) {
 // @Success 200 {object} model.Response
 // @Failure 404 {object} model.Response
 // @Router /api/categories/{id} [put]
-func UpdateCategory(w http.ResponseWriter, r *http.Request) {
+func (h *CategoryHandler) Update(w http.ResponseWriter, r *http.Request) {
 	idStr := r.PathValue("id")
 	id, err := strconv.Atoi(idStr)
 	if err != nil {
@@ -88,22 +131,23 @@ func UpdateCategory(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var updateCategory model.Category
-	if err := json.NewDecoder(r.Body).Decode(&updateCategory); err != nil {
+	var category model.Category
+	if err := json.NewDecoder(r.Body).Decode(&category); err != nil {
 		model.Error(w, http.StatusBadRequest, "Invalid Request")
 		return
 	}
 
-	updated := service.UpdateCategory(id, updateCategory)
-	if updated == nil {
-		model.Error(w, http.StatusNotFound, "category not found")
+	category.ID = id
+	err = h.service.Update(&category)
+	if err != nil {
+		model.Error(w, http.StatusNotFound, err.Error())
 		return
 	}
 
-	model.Success(w, http.StatusOK, "successfully updated category", updated)
+	model.Success(w, http.StatusOK, "successfully updated category", category)
 }
 
-// DeleteCategory godoc
+// Delete godoc
 // @Summary Delete category
 // @Description Menghapus kategori berdasarkan ID
 // @Tags categories
@@ -113,7 +157,7 @@ func UpdateCategory(w http.ResponseWriter, r *http.Request) {
 // @Success 200 {object} model.Response
 // @Failure 404 {object} model.Response
 // @Router /api/categories/{id} [delete]
-func DeleteCategory(w http.ResponseWriter, r *http.Request) {
+func (h *CategoryHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	idStr := r.PathValue("id")
 	id, err := strconv.Atoi(idStr)
 	if err != nil {
@@ -121,8 +165,9 @@ func DeleteCategory(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if !service.DeleteCategory(id) {
-		model.Error(w, http.StatusNotFound, "category not found")
+	err = h.service.Delete(id)
+	if err != nil {
+		model.Error(w, http.StatusNotFound, err.Error())
 		return
 	}
 
