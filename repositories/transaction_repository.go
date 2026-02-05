@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"kasir-api/model"
 	"time"
+
+	"github.com/lib/pq"
 )
 
 type TransactionRepository struct {
@@ -22,31 +24,60 @@ func (repo *TransactionRepository) CreateTransaction(items []model.CheckoutItem)
 	}
 	defer tx.Rollback()
 
-	totalAmount := 0
-	details := make([]model.TransactionDetail, 0)
+	// 1. Dapatkan semua ID produk untuk batch select
+	productIDs := make([]int, len(items))
+	itemMap := make(map[int]int)
+	for i, item := range items {
+		productIDs[i] = item.ProductID
+		itemMap[item.ProductID] = item.Quantity
+	}
 
-	for _, item := range items {
-		var productPrice, stock int
-		var productName string
+	// 2. Batch SELECT produk
+	rows, err := tx.Query(
+		"SELECT id, name, price, stock FROM products WHERE id = ANY($1)",
+		pq.Array(productIDs),
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
 
-		err := tx.QueryRow(
-			"SELECT name, price, stock FROM products WHERE id = $1",
-			item.ProductID,
-		).Scan(&productName, &productPrice, &stock)
-		if err == sql.ErrNoRows {
-			return nil, fmt.Errorf("product id %d not found", item.ProductID)
+	products := make(map[int]struct {
+		Name  string
+		Price int
+		Stock int
+	})
+	for rows.Next() {
+		var id int
+		var p struct {
+			Name  string
+			Price int
+			Stock int
 		}
-		if err != nil {
+		if err := rows.Scan(&id, &p.Name, &p.Price, &p.Stock); err != nil {
 			return nil, err
 		}
+		products[id] = p
+	}
 
-		if stock < item.Quantity {
-			return nil, fmt.Errorf("insufficient stock for product %s (id: %d)", productName, item.ProductID)
+	// 3. Validasi stok dan hitung total
+	totalAmount := 0
+	details := make([]model.TransactionDetail, 0)
+	for _, item := range items {
+		p, ok := products[item.ProductID]
+		if !ok {
+			return nil, fmt.Errorf("product id %d not found", item.ProductID)
 		}
 
-		subtotal := productPrice * item.Quantity
+		if p.Stock < item.Quantity {
+			return nil, fmt.Errorf("insufficient stock for product %s (id: %d)", p.Name, item.ProductID)
+		}
+
+		subtotal := p.Price * item.Quantity
 		totalAmount += subtotal
 
+		// Tetap update stok per baris untuk locking ROW (mencegah double sell)
+		// Namun bisa juga dioptimasi jika perlu. Dalam case POS, ini biasanya ok.
 		_, err = tx.Exec(
 			"UPDATE products SET stock = stock - $1 WHERE id = $2",
 			item.Quantity,
@@ -58,34 +89,48 @@ func (repo *TransactionRepository) CreateTransaction(items []model.CheckoutItem)
 
 		details = append(details, model.TransactionDetail{
 			ProductID:   item.ProductID,
-			ProductName: productName,
+			ProductName: p.Name,
 			Quantity:    item.Quantity,
 			Subtotal:    subtotal,
 		})
 	}
 
+	// 4. INSERT transaction
 	var transactionID int
 	var createdAt time.Time
 	err = tx.QueryRow(
-		"INSERT INTO transactions (total_amount) VALUES ($1) RETURNING id, created_at	",
+		"INSERT INTO transactions (total_amount) VALUES ($1) RETURNING id, created_at",
 		totalAmount,
 	).Scan(&transactionID, &createdAt)
 	if err != nil {
 		return nil, err
 	}
 
-	for i := range details {
+	// 5. Batch INSERT transaction details
+	// Kita bisa gunakan satu query dengan banyak VALUES
+	query := "INSERT INTO transaction_details (transaction_id, product_id, quantity, subtotal) VALUES "
+	values := []interface{}{}
+	for i, d := range details {
 		details[i].TransactionID = transactionID
-		err = tx.QueryRow(
-			"INSERT INTO transaction_details (transaction_id, product_id, quantity, subtotal) VALUES ($1, $2, $3, $4) RETURNING id",
-			transactionID,
-			details[i].ProductID,
-			details[i].Quantity,
-			details[i].Subtotal,
-		).Scan(&details[i].ID)
-		if err != nil {
+		n := i * 4
+		query += fmt.Sprintf("($%d, $%d, $%d, $%d),", n+1, n+2, n+3, n+4)
+		values = append(values, transactionID, d.ProductID, d.Quantity, d.Subtotal)
+	}
+	query = query[:len(query)-1] // Remove trailing comma
+	query += " RETURNING id"
+
+	rows, err = tx.Query(query, values...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	detailIdx := 0
+	for rows.Next() {
+		if err := rows.Scan(&details[detailIdx].ID); err != nil {
 			return nil, err
 		}
+		detailIdx++
 	}
 
 	if err := tx.Commit(); err != nil {
@@ -123,7 +168,8 @@ func (repo *TransactionRepository) GetTodaySummary() (*model.SalesSummary, error
 		GROUP BY p.name
 		ORDER BY total_qty DESC
 		LIMIT 1`
-	err = repo.db.QueryRow(queryTopProduct).Scan(&summary.ProdukTerlaris.Nama, &summary.ProdukTerlaris.QtyTerjual)
+	err = repo.db.QueryRow(queryTopProduct).
+		Scan(&summary.ProdukTerlaris.Nama, &summary.ProdukTerlaris.QtyTerjual)
 	if err == sql.ErrNoRows {
 		summary.ProdukTerlaris.Nama = "-"
 		summary.ProdukTerlaris.QtyTerjual = 0
