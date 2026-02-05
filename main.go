@@ -79,7 +79,7 @@ func main() {
 		w.Write([]byte("API ready!"))
 	})
 
-	// Register routes - Auth
+	// Register routes - Auth (Persiapan aja, Kreatif:v)
 	http.HandleFunc("POST /api/auth/register", authHandler.Register)
 	http.HandleFunc("POST /api/auth/login", authHandler.Login)
 
@@ -97,7 +97,7 @@ func main() {
 	http.HandleFunc("PUT /api/categories/{id}", categoryHandler.HandleCategoryByID)
 	http.HandleFunc("DELETE /api/categories/{id}", categoryHandler.HandleCategoryByID)
 
-	// Register routes - Users
+	// Register routes - Users (Persiapan aja, Kreatif:v)
 	http.HandleFunc("GET /api/users", userHandler.GetAll)
 	http.HandleFunc("GET /api/users/{id}", userHandler.GetById)
 	http.HandleFunc("PUT /api/users/{id}", userHandler.Update)
@@ -106,6 +106,7 @@ func main() {
 	// Register routes - Transactions
 	http.HandleFunc("POST /api/checkout", transactionHandler.HandleCheckout)
 	http.HandleFunc("GET /api/report/hari-ini", transactionHandler.GetTodaySummary)
+	http.HandleFunc("GET /api/report", transactionHandler.GetSummaryByRange)
 
 	// Swagger
 	http.HandleFunc("/swagger/", httpSwagger.WrapHandler)

@@ -146,30 +146,68 @@ func (repo *TransactionRepository) CreateTransaction(items []model.CheckoutItem)
 }
 
 func (repo *TransactionRepository) GetTodaySummary() (*model.SalesSummary, error) {
+	return repo.GetSummaryByRange("", "")
+}
+
+func (repo *TransactionRepository) GetSummaryByRange(startDate, endDate string) (*model.SalesSummary, error) {
 	summary := &model.SalesSummary{}
 
-	// Total Revenue & Total Transaksi
-	queryTotal := `
-		SELECT COALESCE(SUM(total_amount), 0), COUNT(id) 
-		FROM transactions 
-		WHERE created_at::date = CURRENT_DATE`
-	err := repo.db.QueryRow(queryTotal).Scan(&summary.TotalRevenue, &summary.TotalTransaksi)
+	// Query Total Revenue & Total Transaksi
+	queryTotal := `SELECT COALESCE(SUM(total_amount), 0), COUNT(id) FROM transactions WHERE 1=1`
+	argsTotal := []interface{}{}
+	placeholderIdx := 1
+
+	if startDate != "" {
+		queryTotal += fmt.Sprintf(" AND created_at >= $%d", placeholderIdx)
+		argsTotal = append(argsTotal, startDate)
+		placeholderIdx++
+	}
+	if endDate != "" {
+		// Menambahkan 1 hari ke end_date agar mencakup seluruh hari tersebut (inclusive)
+		// Atau menggunakan operator <= dengan format 'YYYY-MM-DD 23:59:59'
+		queryTotal += fmt.Sprintf(" AND created_at <= $%d", placeholderIdx)
+		argsTotal = append(argsTotal, endDate+" 23:59:59")
+		placeholderIdx++
+	} else if startDate == "" {
+		// Default to today if no range provided
+		queryTotal += " AND created_at::date = CURRENT_DATE"
+	}
+
+	err := repo.db.QueryRow(queryTotal, argsTotal...).Scan(&summary.TotalRevenue, &summary.TotalTransaksi)
 	if err != nil {
 		return nil, err
 	}
 
-	// Produk Terlaris
+	// Query Produk Terlaris
 	queryTopProduct := `
 		SELECT p.name, SUM(td.quantity) as total_qty
 		FROM transaction_details td
 		JOIN products p ON td.product_id = p.id
 		JOIN transactions t ON td.transaction_id = t.id
-		WHERE t.created_at::date = CURRENT_DATE
+		WHERE 1=1`
+
+	argsTop := []interface{}{}
+	placeholderIdx = 1
+
+	if startDate != "" {
+		queryTopProduct += fmt.Sprintf(" AND t.created_at >= $%d", placeholderIdx)
+		argsTop = append(argsTop, startDate)
+		placeholderIdx++
+	}
+	if endDate != "" {
+		queryTopProduct += fmt.Sprintf(" AND t.created_at <= $%d", placeholderIdx)
+		argsTop = append(argsTop, endDate+" 23:59:59")
+		placeholderIdx++
+	} else if startDate == "" {
+		queryTopProduct += " AND t.created_at::date = CURRENT_DATE"
+	}
+
+	queryTopProduct += `
 		GROUP BY p.name
 		ORDER BY total_qty DESC
 		LIMIT 1`
-	err = repo.db.QueryRow(queryTopProduct).
-		Scan(&summary.ProdukTerlaris.Nama, &summary.ProdukTerlaris.QtyTerjual)
+
+	err = repo.db.QueryRow(queryTopProduct, argsTop...).Scan(&summary.ProdukTerlaris.Nama, &summary.ProdukTerlaris.QtyTerjual)
 	if err == sql.ErrNoRows {
 		summary.ProdukTerlaris.Nama = "-"
 		summary.ProdukTerlaris.QtyTerjual = 0

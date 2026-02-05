@@ -68,3 +68,26 @@ func (h *TransactionHandler) GetTodaySummary(w http.ResponseWriter, r *http.Requ
 
 	model.Success(w, http.StatusOK, "successfully get summary", summary)
 }
+
+// GetSummaryByRange godoc
+// @Summary Get sales summary by date range
+// @Description Mengambil ringkasan penjualan berdasarkan rentang tanggal
+// @Tags reports
+// @Accept json
+// @Produce json
+// @Param start_date query string false "Start Date (YYYY-MM-DD)"
+// @Param end_date query string false "End Date (YYYY-MM-DD)"
+// @Success 200 {object} model.Response
+// @Router /api/report [get]
+func (h *TransactionHandler) GetSummaryByRange(w http.ResponseWriter, r *http.Request) {
+	startDate := r.URL.Query().Get("start_date")
+	endDate := r.URL.Query().Get("end_date")
+
+	summary, err := h.service.GetSummaryByRange(startDate, endDate)
+	if err != nil {
+		model.Error(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	model.Success(w, http.StatusOK, "successfully get summary", summary)
+}

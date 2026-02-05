@@ -20,3 +20,7 @@ func (s *TransactionService) Checkout(items []model.CheckoutItem) (*model.Transa
 func (s *TransactionService) GetTodaySummary() (*model.SalesSummary, error) {
 	return s.repo.GetTodaySummary()
 }
+
+func (s *TransactionService) GetSummaryByRange(startDate, endDate string) (*model.SalesSummary, error) {
+	return s.repo.GetSummaryByRange(startDate, endDate)
+}

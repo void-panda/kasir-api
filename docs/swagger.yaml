@@ -382,6 +382,30 @@ paths:
       summary: Update product
       tags:
       - products
+  /api/report:
+    get:
+      consumes:
+      - application/json
+      description: Mengambil ringkasan penjualan berdasarkan rentang tanggal
+      parameters:
+      - description: Start Date (YYYY-MM-DD)
+        in: query
+        name: start_date
+        type: string
+      - description: End Date (YYYY-MM-DD)
+        in: query
+        name: end_date
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.Response'
+      summary: Get sales summary by date range
+      tags:
+      - reports
   /api/report/hari-ini:
     get:
       consumes:
