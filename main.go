@@ -59,18 +59,21 @@ func main() {
 	categoryRepo := repositories.NewCategoryRepository(db)
 	productRepo := repositories.NewProductRepository(db)
 	userRepo := repositories.NewUserRepository(db)
+	transactionRepo := repositories.NewTransactionRepository(db)
 
 	// Services
 	authService := service.NewAuthService(authRepo, config.JWTSecret)
 	categoryService := service.NewCategoryService(categoryRepo)
 	productService := service.NewProductService(productRepo)
 	userService := service.NewUserService(userRepo)
+	transactionService := service.NewTransactionService(transactionRepo)
 
 	// Handlers
 	authHandler := handler.NewAuthHandler(authService)
 	categoryHandler := handler.NewCategoryHandler(categoryService)
 	productHandler := handler.NewProductHandler(productService)
 	userHandler := handler.NewUserHandler(userService)
+	transactionHandler := handler.NewTransactionHandler(transactionService)
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("API ready!"))
@@ -99,6 +102,10 @@ func main() {
 	http.HandleFunc("GET /api/users/{id}", userHandler.GetById)
 	http.HandleFunc("PUT /api/users/{id}", userHandler.Update)
 	http.HandleFunc("DELETE /api/users/{id}", userHandler.Delete)
+
+	// Register routes - Transactions
+	http.HandleFunc("POST /api/checkout", transactionHandler.HandleCheckout)
+	http.HandleFunc("GET /api/report/hari-ini", transactionHandler.GetTodaySummary)
 
 	// Swagger
 	http.HandleFunc("/swagger/", httpSwagger.WrapHandler)

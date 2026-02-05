@@ -9,6 +9,20 @@ definitions:
       name:
         type: string
     type: object
+  model.CheckoutItem:
+    properties:
+      product_id:
+        type: integer
+      quantity:
+        type: integer
+    type: object
+  model.CheckoutRequest:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/model.CheckoutItem'
+        type: array
+    type: object
   model.LoginRequest:
     properties:
       email:
@@ -226,11 +240,38 @@ paths:
       summary: Update category
       tags:
       - categories
+  /api/checkout:
+    post:
+      consumes:
+      - application/json
+      description: Membuat transaksi baru dan mengurangi stok produk
+      parameters:
+      - description: Checkout Request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.CheckoutRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.Response'
+      summary: Checkout products
+      tags:
+      - transactions
   /api/products:
     get:
       consumes:
       - application/json
       description: Mengambil semua data produk
+      parameters:
+      - description: Product Name
+        in: query
+        name: name
+        type: string
       produces:
       - application/json
       responses:
@@ -341,6 +382,21 @@ paths:
       summary: Update product
       tags:
       - products
+  /api/report/hari-ini:
+    get:
+      consumes:
+      - application/json
+      description: Mengambil ringkasan penjualan hari ini
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.Response'
+      summary: Get today's sales summary
+      tags:
+      - reports
   /api/users:
     get:
       consumes:

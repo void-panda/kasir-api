@@ -23,10 +23,12 @@ func NewProductHandler(service *service.ProductService) *ProductHandler {
 // @Tags products
 // @Accept json
 // @Produce json
+// @Param name query string false "Product Name"
 // @Success 200 {object} model.Response
 // @Router /api/products [get]
 func (h *ProductHandler) GetAll(w http.ResponseWriter, r *http.Request) {
-	products, err := h.service.GetAll()
+	name := r.URL.Query().Get("name")
+	products, err := h.service.GetAll(name)
 	if err != nil {
 		model.Error(w, http.StatusInternalServerError, err.Error())
 		return
